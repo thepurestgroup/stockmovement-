@@ -98,6 +98,10 @@ tr:last-child td{border-bottom:none}tr:hover td{background:var(--surface2)}
       <div class="sync-status"><span class="sync-dot" id="sync-dot"></span><span id="sync-label">connecting...</span></div>
     </div>
     <div style="display:flex;align-items:center;gap:12px">
+      <div id="online-users" style="display:none;align-items:center;gap:6px;font-size:12px;color:var(--text2)">
+        <span style="color:var(--text3)">Online:</span>
+        <div id="online-avatars" style="display:flex;gap:4px"></div>
+      </div>
       <div id="last-activity" style="font-size:12px;color:var(--text3);text-align:right;display:none">
         <div style="color:var(--text2)">Last update</div>
         <div id="last-activity-text"></div>
@@ -333,8 +337,47 @@ function showApp(){
   document.getElementById('m-by').value=currentUser;
   document.getElementById('b-countby').value=currentUser;
   initFirestore();
+  initPresence();
 }
 
+function initPresence(){
+  if(!currentUser) return;
+  var presenceRef=db.collection('presence').doc(currentUser);
+  // Write presence
+  presenceRef.set({name:currentUser,lastSeen:new Date().toISOString(),online:true});
+  // Update every 30 seconds
+  setInterval(function(){
+    presenceRef.set({name:currentUser,lastSeen:new Date().toISOString(),online:true});
+  },30000);
+  // Mark offline when page closes
+  window.addEventListener('beforeunload',function(){
+    presenceRef.set({name:currentUser,lastSeen:new Date().toISOString(),online:false});
+  });
+  // Listen to all presence
+  db.collection('presence').onSnapshot(function(snap){
+    var now=new Date();
+    var online=[];
+    snap.docs.forEach(function(d){
+      var data=d.data();
+      if(data.online){
+        var lastSeen=new Date(data.lastSeen);
+        var diff=(now-lastSeen)/1000;
+        if(diff<90) online.push(data.name); // active in last 90 seconds
+      }
+    });
+    renderOnlineUsers(online);
+  });
+}
+function renderOnlineUsers(users){
+  var container=document.getElementById('online-avatars');
+  var wrapper=document.getElementById('online-users');
+  if(!users||users.length===0){wrapper.style.display='none';return;}
+  wrapper.style.display='flex';
+  container.innerHTML=users.map(function(u){
+    var isMe=u===currentUser;
+    return '<div title="'+u+'" style="width:28px;height:28px;border-radius:50%;background:'+(isMe?'var(--text)':'#4a90d9')+';color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;border:2px solid #fff;margin-left:-4px;position:relative" >'+u.charAt(0).toUpperCase()+'</div>';
+  }).join('');
+}
 function initFirestore(){
   setSyncStatus('syncing','connecting...');
   db.collection('bins').onSnapshot(snap=>{
