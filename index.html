@@ -55,7 +55,7 @@ tr:last-child td{border-bottom:none}tr:hover td{background:var(--surface2)}
 .badge{display:inline-block;font-size:11px;padding:2px 8px;border-radius:99px;font-weight:500;white-space:nowrap}
 .badge-in{background:var(--success-bg);color:var(--success)}.badge-out{background:var(--danger-bg);color:var(--danger)}
 .badge-transfer{background:var(--surface2);color:var(--text2);border:1px solid var(--border)}.badge-adj{background:var(--info-bg);color:var(--info)}
-.badge-quarantine{background:var(--warn-bg);color:var(--warn)}.badge-ok{background:var(--success-bg);color:var(--success)}
+.badge-quarantine{background:var(--warn-bg);color:var(--warn)}.badge-cleared{background:var(--surface2);color:var(--text2);border:1px solid var(--border)}.badge-ok{background:var(--success-bg);color:var(--success)}
 .badge-warn{background:var(--warn-bg);color:var(--warn)}.badge-crit,.badge-exp{background:var(--danger-bg);color:var(--danger)}
 .alert{padding:12px 16px;border-radius:var(--radius);font-size:13px;margin-bottom:10px}
 .alert-danger{background:var(--danger-bg);border:1px solid #f5c6c2;color:var(--danger)}.alert-warn{background:var(--warn-bg);border:1px solid #f5e0a0;color:var(--warn)}
@@ -229,7 +229,7 @@ tr:last-child td{border-bottom:none}tr:hover td{background:var(--surface2)}
         <div class="card-title">Movement log</div>
         <div class="filter-row">
           <input id="log-search" placeholder="Search SKU, bin, ref..." oninput="renderLog()">
-          <select id="log-type" onchange="renderLog()"><option value="">All types</option><option value="in">Stock in</option><option value="out">Stock out</option><option value="transfer">Location transfer</option><option value="adj">Adjustment</option><option value="quarantine">Quarantine</option></select>
+          <select id="log-type" onchange="renderLog()"><option value="">All types</option><option value="in">Stock in</option><option value="out">Stock out</option><option value="transfer">Location transfer</option><option value="adj">Adjustment</option><option value="quarantine">Quarantine</option><option value="cleared">Cleared from quarantine</option></select>
           <button class="btn btn-sm" onclick="exportCSV('log')">Export CSV</button>
         </div>
         <div class="table-wrap"><table><thead><tr><th>Date &amp; time</th><th>SKU</th><th>Type</th><th>From bin</th><th>To / Qty</th><th>Expiry</th><th>Reference</th><th>Entry by</th><th>Validated by</th><th>Notes</th><th></th></tr></thead><tbody id="log-tbody"></tbody></table></div>
@@ -243,7 +243,7 @@ tr:last-child td{border-bottom:none}tr:hover td{background:var(--surface2)}
         <div class="filter-row">
           <input id="quar-search" placeholder="Search SKU or bin..." oninput="renderQuarantine()">
         </div>
-        <div class="table-wrap"><table><thead><tr><th>Date &amp; time</th><th>Bin</th><th>SKU</th><th>Qty</th><th>Expiry</th><th>Reference</th><th>Entry by</th><th>Notes</th></tr></thead><tbody id="quar-tbody"></tbody></table></div>
+        <div class="table-wrap"><table><thead><tr><th>Date &amp; time</th><th>Bin</th><th>SKU</th><th>Qty</th><th>Expiry</th><th>Reference</th><th>Entry by</th><th>Notes</th><th>Action</th></tr></thead><tbody id="quar-tbody"></tbody></table></div>
       </div>
       <div style="margin-top:4px"><button class="btn btn-sm" onclick="exportCSV('quarantine')">Export quarantine CSV</button></div>
     </div>
@@ -604,6 +604,25 @@ async function runImport(){
   }
 }
 
+async function clearQuarantine(id, sku, qty){
+  if(!confirm('Clear '+qty+' x '+sku+' from quarantine? This cannot be undone.')) return;
+  try{
+    // Delete the quarantine movement record
+    await db.collection('movements').doc(id).delete();
+    // Log a clearance record
+    await db.collection('movements').add({
+      bin:'QUARANTINE',toBin:'QUARANTINE',sku:sku,type:'cleared',qty:qty,expiry:'',
+      ref:'Quarantine clearance',by:currentUser,valby:'',
+      notes:'Cleared from quarantine',date:new Date().toISOString()
+    });
+    alert(qty+' x '+sku+' cleared from quarantine.');
+    renderQuarantine();
+    renderDashboard();
+  }catch(e){
+    alert('Error: '+e.message);
+    console.error(e);
+  }
+}
 function renderQuarantine(){
   var search=(document.getElementById('quar-search')?.value||'').toLowerCase();
   var quarMoves=movements.filter(function(m){return m.type==='quarantine'&&(!search||m.sku.toLowerCase().includes(search)||m.bin.toLowerCase().includes(search));});
@@ -611,7 +630,7 @@ function renderQuarantine(){
   var skuSet={};quarMoves.forEach(function(m){skuSet[m.sku]=1;});var uniqueSKUs=Object.keys(skuSet).length;
   document.getElementById('quar-metrics').innerHTML='<div class="metric warning"><div class="m-val">'+quarMoves.length+'</div><div class="m-lbl">Quarantine movements</div></div><div class="metric warning"><div class="m-val">'+uniqueSKUs+'</div><div class="m-lbl">Unique SKUs</div></div><div class="metric warning"><div class="m-val">'+totalQty.toLocaleString()+'</div><div class="m-lbl">Total units quarantined</div></div>';
   document.getElementById('quar-tbody').innerHTML=quarMoves.length
-    ? quarMoves.map(function(m){return '<tr class="tr-warn"><td style="white-space:nowrap;font-size:12px">'+fmtDT(m.date)+'</td><td><strong>'+m.bin+'</strong></td><td>'+m.sku+'</td><td>'+m.qty.toLocaleString()+'</td><td>'+fmtDate(m.expiry)+'</td><td>'+(m.ref||'—')+'</td><td>'+m.by+'</td><td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(m.notes||'—')+'</td></tr>';}).join('')
+    ? quarMoves.map(function(m){return '<tr class="tr-warn"><td style="white-space:nowrap;font-size:12px">'+fmtDT(m.date)+'</td><td><strong>'+m.bin+'</strong></td><td>'+m.sku+'</td><td>'+m.qty.toLocaleString()+'</td><td>'+fmtDate(m.expiry)+'</td><td>'+(m.ref||'—')+'</td><td>'+m.by+'</td><td style="max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(m.notes||'—')+'</td><td><button class="btn btn-danger btn-sm" onclick="clearQuarantine(''+m._id+'',''+m.sku+'','+m.qty+')">Clear</button></td></tr>';}).join('')
     : '<tr><td colspan="8" class="empty">No quarantine movements yet</td></tr>';
 }
 function updateLastActivity(){
