@@ -692,9 +692,8 @@ function renderQuarantine(){
     rows+='<td>'+(m.ref||'—')+'</td>';
     rows+='<td>'+m.by+'</td>';
     rows+='<td style="max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(m.notes||'—')+'</td>';
-    rows+='<td><button class="btn btn-danger btn-sm" onclick="clearQuarantine(this)">Clear</button></td>';
+    rows+='<td><button class="btn btn-danger btn-sm" data-id="'+id+'" data-sku="'+sku+'" data-qty="'+qty+'" onclick="clearQuarantine(this)">Clear</button></td>';
     rows+='</tr>';
-    rows=rows.replace('onclick="clearQuarantine(this)"','data-id="'+id+'" data-sku="'+sku+'" data-qty="'+qty+'" onclick="clearQuarantine(this)"');
   });
   document.getElementById('quar-tbody').innerHTML=rows||'<tr><td colspan="9" class="empty">No quarantine movements yet</td></tr>';
 }
