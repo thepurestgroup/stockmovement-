@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="theme-color" content="#5B3E96" />
+<title>Purest Stock Count</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --brand: #5B3E96;
+    --brand-dark: #432B73;
+    --brand-light: #F1EDF9;
+    --green: #0F6E56;
+    --green-dark: #085041;
+    --green-light: #E1F5EE;
+    --red: #A32D2D;
+    --red-light: #FCEBEB;
+    --amber: #854F0B;
+    --amber-light: #FAEEDA;
+    --gray-50: #FAF8F5;
+    --gray-100: #EDECE8;
+    --gray-200: #D3D1C7;
+    --gray-400: #888780;
+    --gray-600: #5F5E5A;
+    --gray-800: #2C2C2A;
+    --border: rgba(0,0,0,0.1);
+    --border-md: rgba(0,0,0,0.18);
+    --radius: 10px;
+    --radius-lg: 14px;
+    --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+
+  html, body {
+    font-family: var(--font);
+    background: var(--gray-50);
+    color: var(--gray-800);
+    min-height: 100vh;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  .topbar {
+    position: sticky; top: 0; z-index: 50;
+    background: #fff;
+    border-bottom: 0.5px solid var(--border);
+    padding: 0 16px;
+    height: 56px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .topbar-title { font-size: 16px; font-weight: 600; color: var(--gray-800); }
+  .topbar-sub { font-size: 12px; color: var(--gray-400); margin-top: 1px; }
+  .save-pill {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 11px; font-weight: 600; color: var(--green);
+    background: var(--green-light);
+    padding: 4px 10px; border-radius: 99px;
+  }
+  .save-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
+  .step-dots { display: flex; gap: 6px; align-items: center; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--gray-200); transition: background 0.2s; }
+  .dot.active { background: var(--brand); }
+  .dot.done { background: var(--green); }
+
+  .screen { display: none; padding: 16px; padding-bottom: 100px; }
+  .screen.visible { display: block; }
+
+  .card {
+    background: #fff;
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 16px;
+    margin-bottom: 12px;
+  }
+  .card-title {
+    font-size: 13px; font-weight: 600; color: var(--gray-600);
+    text-transform: uppercase; letter-spacing: 0.05em;
+    margin-bottom: 12px;
+  }
+
+  .field { margin-bottom: 12px; }
+  .field label { display: block; font-size: 13px; color: var(--gray-600); margin-bottom: 5px; font-weight: 500; }
+  .field input {
+    display: block; width: 100%;
+    height: 48px; padding: 0 14px;
+    font-size: 16px;
+    border: 1px solid var(--border-md);
+    border-radius: var(--radius);
+    background: #fff; color: var(--gray-800);
+    -webkit-appearance: none; appearance: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .field input:focus {
+    outline: none;
+    border-color: var(--brand);
+    box-shadow: 0 0 0 3px rgba(91,62,150,0.15);
+  }
+  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+  .ac-wrap { position: relative; }
+  .ac-list {
+    position: absolute; top: calc(100% + 4px); left: 0; right: 0;
+    background: #fff;
+    border: 1px solid var(--border-md);
+    border-radius: var(--radius);
+    z-index: 100;
+    max-height: 200px; overflow-y: auto;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+  }
+  .ac-item { padding: 12px 14px; font-size: 15px; cursor: pointer; border-bottom: 0.5px solid var(--border); color: var(--gray-800); }
+  .ac-item:last-child { border-bottom: none; }
+  .ac-item:active { background: var(--gray-50); }
+
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    height: 48px; padding: 0 20px;
+    border-radius: var(--radius);
+    font-size: 15px; font-weight: 600;
+    border: 1px solid var(--border-md);
+    background: #fff; color: var(--gray-800);
+    cursor: pointer; -webkit-tap-highlight-color: transparent;
+    transition: background 0.12s, transform 0.1s;
+    white-space: nowrap;
+  }
+  .btn:active { transform: scale(0.97); background: var(--gray-50); }
+  .btn-primary { background: var(--brand); color: #fff; border-color: var(--brand); }
+  .btn-primary:active { background: var(--brand-dark); }
+  .btn-success { background: var(--green); color: #fff; border-color: var(--green); }
+  .btn-success:active { background: var(--green-dark); }
+  .btn-full { width: 100%; }
+  .btn-sm { height: 36px; padding: 0 12px; font-size: 13px; }
+
+  .bottom-cta {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: #fff;
+    border-top: 0.5px solid var(--border);
+    padding: 12px 16px;
+    padding-bottom: calc(12px + env(safe-area-inset-bottom));
+    z-index: 40;
+  }
+
+  .entries-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 8px;
+  }
+  .entries-title { font-size: 14px; font-weight: 600; color: var(--gray-800); }
+  .entry-card {
+    background: #fff;
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 14px;
+    margin-bottom: 8px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .entry-info { flex: 1; min-width: 0; }
+  .entry-sku { font-size: 14px; font-weight: 600; color: var(--gray-800); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .entry-meta { font-size: 12px; color: var(--gray-400); margin-top: 2px; }
+  .entry-qty { font-size: 20px; font-weight: 700; color: var(--brand); min-width: 40px; text-align: right; }
+  .btn-del { background: none; border: none; padding: 8px; color: var(--gray-400); cursor: pointer; font-size: 20px; line-height: 1; }
+  .btn-del:active { color: var(--red); }
+
+  .empty { text-align: center; padding: 32px 16px; color: var(--gray-400); font-size: 14px; }
+  .empty-icon { font-size: 36px; margin-bottom: 8px; }
+
+  .stat-row { display: grid; grid-template-columns: repeat(2,1fr); gap: 8px; margin-bottom: 12px; }
+  .stat-box { background: #fff; border: 0.5px solid var(--border); border-radius: var(--radius); padding: 10px 12px; }
+  .stat-lbl { font-size: 11px; color: var(--gray-400); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 3px; }
+  .stat-num { font-size: 22px; font-weight: 700; color: var(--gray-800); }
+
+  .toast {
+    position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
+    background: var(--gray-800); color: #fff;
+    padding: 10px 20px; border-radius: 99px;
+    font-size: 14px; font-weight: 500;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.2s;
+    z-index: 200; white-space: nowrap;
+  }
+  .toast.show { opacity: 1; }
+
+  .session-info {
+    background: var(--brand-light); border-radius: var(--radius);
+    padding: 10px 14px; margin-bottom: 12px;
+    font-size: 13px; color: var(--brand-dark);
+    display: flex; flex-wrap: wrap; gap: 8px 16px;
+  }
+  .session-info span { white-space: nowrap; }
+  .session-info strong { font-weight: 600; }
+
+  .resume-banner {
+    background: var(--amber-light);
+    border: 1px solid rgba(133,79,11,0.25);
+    border-radius: var(--radius-lg);
+    padding: 14px 16px;
+    margin-bottom: 12px;
+  }
+  .resume-title { font-size: 14px; font-weight: 600; color: var(--amber); margin-bottom: 4px; }
+  .resume-text { font-size: 13px; color: var(--amber); margin-bottom: 12px; }
+  .resume-actions { display: flex; gap: 8px; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div>
+    <div class="topbar-title" id="topbar-title"><span style="color:var(--brand);">purest</span> stock count</div>
+    <div class="topbar-sub" id="topbar-sub">The Purest Co · Blind count</div>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px;">
+    <div class="save-pill" id="save-pill" style="display:none;"><div class="save-dot"></div><span>Saved</span></div>
+    <div class="step-dots">
+      <div class="dot active" id="d1"></div>
+      <div class="dot" id="d2"></div>
+    </div>
+  </div>
+</div>
+
+<!-- SCREEN 1: SETUP -->
+<div class="screen visible" id="scr-setup">
+  <div class="resume-banner" id="resume-banner" style="display:none;">
+    <div class="resume-title">Unfinished count found</div>
+    <div class="resume-text" id="resume-text"></div>
+    <div class="resume-actions">
+      <button class="btn btn-sm btn-primary" onclick="resumeSession()">Resume count</button>
+      <button class="btn btn-sm" onclick="discardSession()">Discard</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">New blind count</div>
+    <div class="field">
+      <label for="f-name">Counter person</label>
+      <input type="text" id="f-name" placeholder="Your name" autocomplete="name" />
+    </div>
+    <div class="field">
+      <label for="f-date">Count date</label>
+      <input type="date" id="f-date" />
+    </div>
+  </div>
+
+  <div id="history-wrap" style="display:none;margin-top:4px;">
+    <div class="entries-header">
+      <div class="entries-title">Past counts</div>
+    </div>
+    <div style="font-size:12px;color:var(--gray-400);margin-bottom:8px;">Finished counts saved on this device. Tap CSV to download again.</div>
+    <div id="history-list"></div>
+  </div>
+
+  <div class="bottom-cta">
+    <button class="btn btn-primary btn-full" onclick="startCount()">Start counting →</button>
+  </div>
+</div>
+
+<!-- SCREEN 2: COUNT -->
+<div class="screen" id="scr-count">
+  <div class="session-info" id="si-count"></div>
+
+  <div class="card">
+    <div class="card-title">Add entry</div>
+    <div class="field">
+      <label for="in-loc">Location</label>
+      <input type="text" id="in-loc" placeholder="e.g. A-01-02" autocomplete="off" autocapitalize="characters" />
+    </div>
+    <div class="field ac-wrap">
+      <label for="in-sku">SKU code</label>
+      <input type="text" id="in-sku" placeholder="Search SKU…" oninput="onSkuInput()" autocomplete="off" autocorrect="off" autocapitalize="characters" />
+      <div class="ac-list" id="ac-list" style="display:none;"></div>
+    </div>
+    <div class="field-row">
+      <div class="field" style="margin:0;">
+        <label for="in-qty">Qty</label>
+        <input type="number" id="in-qty" placeholder="0" min="0" inputmode="numeric" />
+      </div>
+      <div class="field" style="margin:0;">
+        <label>Expiry date</label>
+        <div style="display:grid;grid-template-columns:1fr 1.4fr 1.2fr;gap:6px;">
+          <input type="number" id="in-exp-d" placeholder="DD" min="1" max="31" inputmode="numeric" aria-label="Expiry day" style="text-align:center;padding:0 4px;" />
+          <select id="in-exp-m" aria-label="Expiry month" style="display:block;width:100%;height:48px;padding:0 8px;font-size:16px;border:1px solid var(--border-md);border-radius:var(--radius);background:#fff;color:var(--gray-800);-webkit-appearance:none;appearance:none;text-align:center;">
+            <option value="">Month</option>
+            <option value="01">Jan</option><option value="02">Feb</option><option value="03">Mar</option>
+            <option value="04">Apr</option><option value="05">May</option><option value="06">Jun</option>
+            <option value="07">Jul</option><option value="08">Aug</option><option value="09">Sep</option>
+            <option value="10">Oct</option><option value="11">Nov</option><option value="12">Dec</option>
+          </select>
+          <select id="in-exp-y" aria-label="Expiry year" style="display:block;width:100%;height:48px;padding:0 8px;font-size:16px;border:1px solid var(--border-md);border-radius:var(--radius);background:#fff;color:var(--gray-800);-webkit-appearance:none;appearance:none;text-align:center;"></select>
+        </div>
+      </div>
+    </div>
+    <button class="btn btn-primary btn-full" style="margin-top:4px;" onclick="addEntry()">+ Add entry</button>
+  </div>
+
+  <div class="entries-header">
+    <div class="entries-title" id="entries-lbl">Entries (0)</div>
+  </div>
+  <div id="entries-list">
+    <div class="empty"><div class="empty-icon">📋</div>No entries yet.<br>Add the first count above.</div>
+  </div>
+
+  <div class="bottom-cta" id="cta-count" style="display:none;flex-direction:row;gap:8px;">
+    <button class="btn" style="flex:1;" onclick="exportCSV()">↓ Export CSV</button>
+    <button class="btn btn-success" style="flex:1;" onclick="finishCount()">✓ Finish count</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* Purest Group SKU master list — 151 codes */
+const SKUS = [
+  "PN-SB-CGB6-1",
+  "PN-SB-CGCY6-1",
+  "PN-SB-CGSS6-1",
+  "PN-SB-CGBZ6-1",
+  "PN-SB-ALD-1",
+  "PN-SB-GTS-1",
+  "PN-SB-PHV-1",
+  "PN-SB-SAJ-1",
+  "PN-SB-SOSE-1",
+  "PN-SB-STG-1",
+  "PN-SB-BCCE-1",
+  "PN-SB-CRMS-1",
+  "PN-SB-CGBM-1",
+  "PN-SB-MAP-1",
+  "PN-SB-LTME-1",
+  "PN-SB-SKO-1",
+  "PN-SB-SOSEZ-1",
+  "PN-SB-NBSE-1",
+  "PN-SB-CGB-1",
+  "PN-SB-CGSS-1",
+  "PN-SB-CGCY-1",
+  "PN-SB-CGBZ-1",
+  "PN-SB-CGS-1",
+  "PN-ES-DPM-1",
+  "PN-ES-FCPM-1",
+  "PN-ES-SGPM-1",
+  "PN-ES-LBPM-1",
+  "PN-ES-CHPM-1",
+  "PN-ES-SSPM-1",
+  "PN-ES-IPM-1",
+  "PN-ES-JPM-1",
+  "PN-ES-DPMK-1",
+  "PN-ES-LUPM-1",
+  "PN-ES-MCP-1",
+  "PN-ES-HH-1",
+  "PN-ES-HHS-1",
+  "PN-ES-GKSB-1",
+  "PN-ES-LKSB-1",
+  "PN-ES-DLB-1",
+  "PN-ES-MCPM-1",
+  "PN-ES-HOHA-1",
+  "PN-ES-DSB-1",
+  "PN-ES-GKSBH-1",
+  "PN-ES-MCPH-1",
+  "PN-BN-AG-1",
+  "PN-BN-CLS-1",
+  "PN-BN-COL-1",
+  "PN-BN-NS-1",
+  "PN-BN-WP-1",
+  "PN-BN-CAVE-1",
+  "PN-BN-COCO-1",
+  "PN-BN-ALMD-1",
+  "PN-BN-AG-SHOT",
+  "PN-BN-AG-MINI",
+  "PN-BN-CLS-SHOT",
+  "PN-BN-CLS-MINI",
+  "PN-BN-ROSE-1",
+  "PN-BN-ROSE-SHOT",
+  "PN-BN-ROSE-MINI",
+  "PN-BN-WP-SHOT",
+  "PN-BN-DG-SHOT",
+  "PN-BN-SPCLS-1",
+  "PN-BN-SPWP-1",
+  "PN-SH-AG-1",
+  "PN-ES-OMB-1",
+  "PN-ES-SBT-1",
+  "PN-ES-SCSC-1",
+  "PN-ES-CGJKG-1",
+  "PN-ES-PCL-12",
+  "PN-ES-PEH-1",
+  "PN-ES-CWPIC-1",
+  "PN-ES-DBD-1",
+  "ST-SACH-CGBM-1",
+  "ST-SACH-LTME-1",
+  "ST-SACH-SKO-1",
+  "ST-NUTRI-LTME-1",
+  "ST-NUTRI-SKO-1",
+  "CARD-ALD-1",
+  "CARD-GTS-1",
+  "CARD-PHV-1",
+  "CARD-SAJ-1",
+  "CARD-STG-1",
+  "CARD-BCCE-1",
+  "CARD-CGCY6-1",
+  "CARD-CGSS6-1",
+  "CARD-CRMS-1",
+  "CARD-CGBZ6-1",
+  "CARD-CGBM-1",
+  "CARD-LTME-1",
+  "CARD-SKO-1",
+  "CARD-SOSEZ-1",
+  "CARD-APOLOGY",
+  "CARD-PEH",
+  "CARD-CWPIC-1",
+  "CARD-MAP-1",
+  "CARD-CGCY-1",
+  "CARD-CGSS-1",
+  "CARD-CGBZ-1",
+  "CARD-SOSE-1",
+  "CARD-CGB-1",
+  "CARD-STGDAY",
+  "ST-NUTRI-MAP-1",
+  "ST-NUTRI-CRMS-1",
+  "ST-SACH-MAP-1",
+  "ST-SACH-CRMS-1",
+  "CARD-BN-1",
+  "PKG-BN-CTN-4",
+  "PKG-SB-CTN-15",
+  "PKG-SB-CTN-30",
+  "PKG-SB-CGB-30",
+  "PKG-SB-SOSE-30",
+  "PKG-SB-BROWN-1",
+  "PKG-SB-BROWN-2",
+  "PKG-SB-BROWN-3",
+  "PKG-SB-BROWN-4",
+  "PKG-BN-BROWN-1",
+  "PKG-SB-BROWN-3TUB",
+  "PKG-RT-CGB-15",
+  "PKG-RT-SOSE-15",
+  "PKG-RT-STG-15",
+  "PKG-RT-BCCE-15",
+  "PKG-RT-CGS-15",
+  "PKG-RT-CGSS-15",
+  "PKG-RT-GTS-15",
+  "PKG-RT-PHV-15",
+  "PKG-EPE-THICK-1",
+  "PKG-EPE-THICK-SHOT",
+  "PKG-EPE-THICK-MINI",
+  "PKG-EPE-THIN-1",
+  "PKG-SB-POLY-1",
+  "PKG-SB-POLYFOAM-1",
+  "PKG-SB-BROWN-1TUB",
+  "PKG-RT-CGBZ-15",
+  "PKG-RT-CGB6-15",
+  "PKG-CHRISTMASBOX-1",
+  "PKG-RTMY-BCCE-15",
+  "PKG-RTMY-SOSE-15",
+  "PKG-SB-CGB6-30",
+  "PKG-RT-CGSS6-15",
+  "PKG-RT-CGBZ6-15",
+  "PKG-RTMY-CGB6-15",
+  "PKG-RTMY-CGBZ6-15",
+  "PN-ME-DB-1",
+  "PN-ME-PSB-1",
+  "PN-ME-PB-1",
+  "PN-ME-PBB-1",
+  "PN-ME-PBP-1",
+  "PN-ME-WRISTBAG-1",
+  "PKG-SB-PHV-30",
+  "PKG-SB-STG-30",
+  "PKG-SB-BCCE-30"
+];
+
+const STORE_KEY = 'pn-blind-count-v2';
+const HISTORY_KEY = 'pn-blind-count-history';
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+let session = {};
+let entries = [];
+
+/* ---------- DATE HANDLING ----------
+   Dates stay as ISO strings (yyyy-mm-dd) straight from the date input.
+   Never re-parsed through Date() — that's what causes day/month flips.
+   Display + export use explicit formatting only. */
+
+function fmtDate(iso) {
+  if (!iso || !/^\d{4}-\d{2}-\d{2}$/.test(iso)) return iso || '';
+  const [y, m, d] = iso.split('-');
+  return `${d} ${MONTHS[parseInt(m, 10) - 1]} ${y}`;
+}
+
+/* ---------- PERSISTENCE ----------
+   Every change writes immediately to localStorage on this device. */
+
+function persist() {
+  try {
+    localStorage.setItem(STORE_KEY, JSON.stringify({ session, entries, savedAt: Date.now() }));
+    document.getElementById('save-pill').style.display = 'inline-flex';
+  } catch (e) {
+    toast('⚠ Could not save — storage full?');
+  }
+}
+
+function loadPersisted() {
+  try {
+    const raw = localStorage.getItem(STORE_KEY);
+    if (!raw) return null;
+    const data = JSON.parse(raw);
+    if (!data || !data.session || !data.session.id) return null;
+    return data;
+  } catch (e) { return null; }
+}
+
+function clearPersisted() {
+  try { localStorage.removeItem(STORE_KEY); } catch (e) {}
+}
+
+/* ---------- UI ---------- */
+
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+function setDots(step) {
+  ['d1','d2'].forEach((id, i) => {
+    const el = document.getElementById(id);
+    const n = i + 1;
+    el.className = 'dot' + (n < step ? ' done' : n === step ? ' active' : '');
+  });
+}
+
+function show(id) {
+  ['scr-setup','scr-count'].forEach(s => {
+    document.getElementById(s).className = 'screen' + (s === id ? ' visible' : '');
+  });
+  window.scrollTo(0, 0);
+}
+
+function startCount() {
+  const n = document.getElementById('f-name').value.trim();
+  const d = document.getElementById('f-date').value;
+  if (!n) { toast('Please enter counter name'); return; }
+  if (!d) { toast('Please select count date'); return; }
+  session = { id: 'SC-' + Date.now().toString().slice(-6), counter: n, date: d };
+  persist();
+  enterCountScreen();
+}
+
+function enterCountScreen() {
+  document.getElementById('si-count').innerHTML =
+    `<span>Session <strong>${session.id}</strong></span>
+     <span>Counter <strong>${session.counter}</strong></span>
+     <span>Date <strong>${fmtDate(session.date)}</strong></span>`;
+  document.getElementById('topbar-title').innerHTML = '<span style="color:var(--brand);">purest</span> counting';
+  document.getElementById('topbar-sub').textContent = `${session.id} · ${session.counter}`;
+  renderEntries();
+  show('scr-count');
+  setDots(2);
+  document.getElementById('in-loc').focus();
+}
+
+function onSkuInput() {
+  const raw = document.getElementById('in-sku').value.trim();
+  const list = document.getElementById('ac-list');
+  if (!raw) { list.style.display = 'none'; return; }
+  /* Smart filter: every typed term (split by space) must appear somewhere
+     in the SKU code or product name. "CGB" matches PN-SB-CGB6-1.
+     "cgb 12" matches only the 12s variant. Dashes ignored, case ignored. */
+  const terms = raw.toLowerCase().split(/\s+/).filter(Boolean);
+  const matches = SKUS.filter(s => {
+    const hay = s.toLowerCase();
+    const hayFlat = hay.replace(/-/g, '');
+    return terms.every(t => hay.includes(t) || hayFlat.includes(t.replace(/-/g, '')));
+  }).slice(0, 8);
+  if (!matches.length) {
+    list.innerHTML = '<div class="ac-item" style="color:var(--gray-400);cursor:default;">No matching SKU</div>';
+    list.style.display = 'block';
+    return;
+  }
+  list.innerHTML = matches.map(s => {
+    let shown = s;
+    terms.forEach(t => {
+      const i = shown.toLowerCase().indexOf(t);
+      if (i >= 0) shown = shown.slice(0, i) + '<mark style="background:#E2D8F3;color:#432B73;border-radius:3px;padding:0 1px;">' + shown.slice(i, i + t.length) + '</mark>' + shown.slice(i + t.length);
+    });
+    return `<div class="ac-item" ontouchstart="" onclick="pickSku(this)" data-val="${s.replace(/"/g,'&quot;')}">${shown}</div>`;
+  }).join('');
+  list.style.display = 'block';
+}
+
+function pickSku(el) {
+  document.getElementById('in-sku').value = el.dataset.val;
+  document.getElementById('ac-list').style.display = 'none';
+  document.getElementById('in-qty').focus();
+}
+
+document.addEventListener('touchstart', e => {
+  if (!e.target.closest('.ac-wrap')) document.getElementById('ac-list').style.display = 'none';
+}, { passive: true });
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('.ac-wrap')) document.getElementById('ac-list').style.display = 'none';
+});
+
+function addEntry() {
+  const loc = document.getElementById('in-loc').value.trim();
+  const sku = document.getElementById('in-sku').value.trim();
+  const qty = document.getElementById('in-qty').value;
+  const d = document.getElementById('in-exp-d').value;
+  const m = document.getElementById('in-exp-m').value;
+  const y = document.getElementById('in-exp-y').value;
+  if (!loc) { toast('Location is required'); return; }
+  if (!sku) { toast('SKU code is required'); return; }
+  if (qty === '') { toast('Qty is required'); return; }
+  if (!d || !m || !y) { toast('Complete the expiry date (day, month, year)'); return; }
+  const day = parseInt(d);
+  const daysInMonth = new Date(parseInt(y), parseInt(m), 0).getDate();
+  if (day < 1 || day > daysInMonth) { toast(`Invalid day — ${MONTHS[parseInt(m)-1]} ${y} has ${daysInMonth} days`); return; }
+  const expiry = `${y}-${m}-${String(day).padStart(2,'0')}`;
+  entries.push({ id: Date.now(), loc, sku, qty: parseInt(qty) || 0, expiry });
+  persist();
+  renderEntries();
+  // Keep location filled — counters usually do several SKUs in the same bin.
+  document.getElementById('in-sku').value = '';
+  document.getElementById('in-qty').value = '';
+  document.getElementById('in-exp-d').value = '';
+  document.getElementById('in-exp-m').value = '';
+  document.getElementById('in-exp-y').value = '';
+  document.getElementById('in-sku').focus();
+  toast('Entry saved ✓');
+}
+
+function removeEntry(id) {
+  if (!confirm('Remove this entry?')) return;
+  entries = entries.filter(e => e.id !== id);
+  persist();
+  renderEntries();
+}
+
+function renderEntries() {
+  const container = document.getElementById('entries-list');
+  const cta = document.getElementById('cta-count');
+  document.getElementById('entries-lbl').textContent = `Entries (${entries.length})`;
+  cta.style.display = entries.length ? 'flex' : 'none';
+  if (!entries.length) {
+    container.innerHTML = '<div class="empty"><div class="empty-icon">📋</div>No entries yet.<br>Add the first count above.</div>';
+    return;
+  }
+  container.innerHTML = [...entries].reverse().map(e => `
+    <div class="entry-card">
+      <div class="entry-info">
+        <div class="entry-sku">${e.sku}</div>
+        <div class="entry-meta">Loc ${e.loc} · Exp ${fmtDate(e.expiry)}</div>
+      </div>
+      <div class="entry-qty">${e.qty}</div>
+      <button class="btn-del" onclick="removeEntry(${e.id})" aria-label="Delete entry">×</button>
+    </div>`).join('');
+}
+
+/* ---------- EXPORT ----------
+   Expiry exports in two columns:
+   - "Expiry" = 06 May 2027 (spelled-out month, Excel cannot flip it)
+   - "Expiry (ISO)" = 2027-05-06 (for system imports) */
+
+function buildAndDownloadCSV(sess, ents) {
+  const rows = [['Session ID','Count Date','Counter Person','Location','SKU Code','Qty','Expiry','Expiry (ISO)']];
+  ents.forEach(e => {
+    rows.push([sess.id, fmtDate(sess.date), sess.counter, e.loc, e.sku, e.qty, fmtDate(e.expiry), e.expiry]);
+  });
+  const csv = '\uFEFF' + rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\r\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `blind-count-${sess.id}-${sess.date}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+function exportCSV() {
+  if (!entries.length) { toast('No data to export'); return; }
+  buildAndDownloadCSV(session, entries);
+  toast('CSV exported ✓');
+}
+
+function finishCount() {
+  if (!entries.length) { toast('No entries to finish'); return; }
+  if (!confirm(`Finish this count?\n\n${entries.length} entries by ${session.counter}.\n\nThe CSV will download automatically and the count will be saved to "Past counts" so you can re-export it any time.`)) return;
+
+  // 1. Auto-download the CSV so it can never be skipped
+  buildAndDownloadCSV(session, entries);
+
+  // 2. Archive to history (kept on this device, re-exportable)
+  archiveSession(session, entries);
+
+  // 3. Clear the active (in-progress) session only
+  clearPersisted();
+  toast('Count saved & CSV exported ✓');
+
+  setTimeout(() => {
+    entries = []; session = {};
+    document.getElementById('f-name').value = '';
+    document.getElementById('f-date').value = new Date().toISOString().split('T')[0];
+    document.getElementById('topbar-title').innerHTML = '<span style="color:var(--brand);">purest</span> stock count';
+    document.getElementById('topbar-sub').textContent = 'The Purest Co · Blind count';
+    document.getElementById('save-pill').style.display = 'none';
+    document.getElementById('resume-banner').style.display = 'none';
+    renderEntries();
+    renderHistory();
+    show('scr-setup');
+    setDots(1);
+  }, 1200);
+}
+
+/* ---------- PAST COUNTS HISTORY ----------
+   Finished counts are archived here so they can be re-exported.
+   Nothing is permanently deleted unless the user explicitly removes it. */
+
+function loadHistory() {
+  try {
+    const raw = localStorage.getItem(HISTORY_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch (e) { return []; }
+}
+
+function archiveSession(sess, ents) {
+  try {
+    const hist = loadHistory();
+    hist.unshift({ session: sess, entries: ents, finishedAt: Date.now() });
+    // keep the most recent 50 counts
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(hist.slice(0, 50)));
+  } catch (e) {
+    toast('⚠ Could not archive — storage full?');
+  }
+}
+
+function reExportHistory(idx) {
+  const hist = loadHistory();
+  const item = hist[idx];
+  if (!item) { toast('Record not found'); return; }
+  buildAndDownloadCSV(item.session, item.entries);
+  toast('CSV re-exported ✓');
+}
+
+function deleteHistory(idx) {
+  const hist = loadHistory();
+  const item = hist[idx];
+  if (!item) return;
+  if (!confirm(`Delete saved count ${item.session.id}?\n\nMake sure you have the CSV — this cannot be undone.`)) return;
+  hist.splice(idx, 1);
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(hist));
+  renderHistory();
+  toast('Record deleted');
+}
+
+function renderHistory() {
+  const wrap = document.getElementById('history-wrap');
+  const list = document.getElementById('history-list');
+  if (!wrap || !list) return;
+  const hist = loadHistory();
+  if (!hist.length) { wrap.style.display = 'none'; return; }
+  wrap.style.display = 'block';
+  list.innerHTML = hist.map((h, i) => {
+    const when = new Date(h.finishedAt);
+    const units = (h.entries || []).reduce((s, e) => s + (e.qty || 0), 0);
+    return `
+    <div class="entry-card">
+      <div class="entry-info">
+        <div class="entry-sku">${h.session.id} · ${h.session.counter}</div>
+        <div class="entry-meta">${fmtDate(h.session.date)} · ${(h.entries||[]).length} lines · ${units} units · finished ${when.toLocaleDateString()}</div>
+      </div>
+      <button class="btn btn-sm" style="height:34px;" onclick="reExportHistory(${i})"><i class="ti ti-download" aria-hidden="true"></i> CSV</button>
+      <button class="btn-del" onclick="deleteHistory(${i})" aria-label="Delete record">×</button>
+    </div>`;
+  }).join('');
+}
+
+/* ---------- RESUME ON LOAD ---------- */
+
+let pendingResume = null;
+
+function resumeSession() {
+  if (!pendingResume) return;
+  session = pendingResume.session;
+  entries = pendingResume.entries || [];
+  pendingResume = null;
+  document.getElementById('resume-banner').style.display = 'none';
+  document.getElementById('save-pill').style.display = 'inline-flex';
+  enterCountScreen();
+  toast(`Resumed — ${entries.length} entries restored`);
+}
+
+function discardSession() {
+  if (!confirm('Discard the unfinished count? All its entries will be permanently deleted.')) return;
+  clearPersisted();
+  pendingResume = null;
+  document.getElementById('resume-banner').style.display = 'none';
+  toast('Count discarded');
+}
+
+(function init() {
+  document.getElementById('f-date').value = new Date().toISOString().split('T')[0];
+  const ySel = document.getElementById('in-exp-y');
+  const thisYear = new Date().getFullYear();
+  ySel.innerHTML = '<option value="">Year</option>' +
+    Array.from({length: 8}, (_, i) => thisYear - 1 + i)
+      .map(y => `<option value="${y}">${y}</option>`).join('');
+  const saved = loadPersisted();
+  if (saved) {
+    pendingResume = saved;
+    const when = new Date(saved.savedAt);
+    const count = (saved.entries || []).length;
+    document.getElementById('resume-text').textContent =
+      `${saved.session.id} by ${saved.session.counter} — ${count} entries, last saved ${when.toLocaleTimeString()}.`;
+    document.getElementById('resume-banner').style.display = 'block';
+  }
+  renderHistory();
+})();
+</script>
+</body>
+</html>
